@@ -1,7 +1,9 @@
 // OGRE 1.12 starter sample
+#include <iostream>
 #include <Ogre.h>
 #include <OgreApplicationContext.h>
 
+using std::cout, std::endl;
 using namespace Ogre;
 using namespace OgreBites;
 
@@ -56,16 +58,20 @@ void MyTestApp::setup()
 	camera->setNearClipDistance(5);  // specific to this sample
 	camera->setAutoAspectRatio(true);
 	SceneNode * camera_node = root_node->createChildSceneNode();
-	camera_node->setPosition(0, 0, 140);
+	camera_node->setPosition(100, 100, 500);
 	camera_node->lookAt(Vector3{0, 0, -1}, Node::TS_PARENT);
 	camera_node->attachObject(camera);
 
 	getRenderWindow()->addViewport(camera);  // render into the main window
 
-	// finally something to render
-	Entity * ent = scene->createEntity("ogrehead.mesh");
-	SceneNode * node = root_node->createChildSceneNode();
-	node->attachObject(ent);
+	// create and render cube
+	Entity * cube = scene->createEntity(SceneManager::PT_CUBE);
+	SceneNode * cube_node = root_node->createChildSceneNode();
+	cube_node->attachObject(cube);
+
+	// cube size ?
+	Vector3 cube_size = cube->getBoundingBox().getSize();
+	cout << "cube aabb: " << cube_size << endl;
 }
 
 int main(int argc, char * argv[])
