@@ -18,7 +18,7 @@ public:
 };
 
 MyTestApp::MyTestApp()
-	: ApplicationContext{"OgreTutorialApp"}
+	: ApplicationContext{"OgreCubeRain"}
 {}
 
 bool MyTestApp::keyPressed(KeyboardEvent const & evt)
@@ -58,7 +58,7 @@ void MyTestApp::setup()
 	camera->setNearClipDistance(5);  // specific to this sample
 	camera->setAutoAspectRatio(true);
 	SceneNode * camera_node = root_node->createChildSceneNode();
-	camera_node->setPosition(100, 100, 500);
+	camera_node->setPosition(100, 200, 800);
 	camera_node->lookAt(Vector3{0, 0, -1}, Node::TS_PARENT);
 	camera_node->attachObject(camera);
 
@@ -72,6 +72,20 @@ void MyTestApp::setup()
 	// cube size ?
 	Vector3 cube_size = cube->getBoundingBox().getSize();
 	cout << "cube aabb: " << cube_size << endl;
+
+	// cube2
+	Entity * cube2 = cube->clone("cube2");
+	SceneNode * cube2_node = root_node->createChildSceneNode();
+	cube2_node->attachObject(cube2);
+	cube2_node->setPosition(110, 0, 0);
+
+	// cube3
+	Entity * cube3 = cube->clone("cube3");
+	SceneNode * cube3_node = root_node->createChildSceneNode();
+	cube3_node->attachObject(cube3);
+	cube3_node->setPosition(50, 0, 110);
+
+
 }
 
 int main(int argc, char * argv[])
