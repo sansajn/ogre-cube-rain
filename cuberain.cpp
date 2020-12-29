@@ -1,19 +1,47 @@
 // cuberain OGRE implementation
+#include <vector>
 #include <string>
 #include <memory>
+#include <random>
+#include <chrono>
 #include <iostream>
 #include <Ogre.h>
 #include <OgreApplicationContext.h>
 #include <OgreCameraMan.h>
 #include <OgreTrays.h>
 
-using std::string;
+using std::vector;
+using std::string, std::to_string;
 using std::unique_ptr, std::make_unique;
+using std::random_device, std::default_random_engine;
 using std::cout, std::endl;
-using namespace Ogre;
+using std::chrono::steady_clock, std::chrono::duration;
+
+using Ogre::SceneManager, // Ogre::vector name collision with std::vector so `using namespace Ogre` cannot be used
+	Ogre::SceneNode,
+	Ogre::FrameListener,
+	Ogre::FrameEvent,
+	Ogre::Light,
+	Ogre::Camera,
+	Ogre::Entity,
+	Ogre::ColourValue,
+	Ogre::Vector3,
+	Ogre::Real,
+	Ogre::Node;
+
 using namespace OgreBites;
 
-static string to_string(CameraStyle style);
+
+Vector3 const camera_position = {0, 0, 10};
+
+// flyweight pattern
+struct cube_object
+{
+	Vector3 position;
+	Real scale;  // value between 0.7 and 1.4 used to scale cube model
+};
+
+cube_object new_cube();
 
 
 class ogre_app
@@ -22,7 +50,6 @@ class ogre_app
 public:
 	ogre_app();
 	void go();
-	void setup() override;
 
 	// user input
 	bool keyPressed(KeyboardEvent const & evt) override;
@@ -33,9 +60,42 @@ public:
 	void frameRendered(Ogre::FrameEvent const & evt) override;
 
 private:
+	void update(duration<double> dt);
+	void setup() override;
+
+	// renderer events
+	bool frameStarted(FrameEvent const & evt) override;
+
 	unique_ptr<CameraMan> _cameraman;
+	vector<cube_object> _cubes;  // cube pool
+	vector<SceneNode *> _cube_nodes;
+	steady_clock::time_point _last_frame_tp;
 };
 
+namespace std {
+
+string to_string(CameraStyle style);
+
+}  // std
+
+void ogre_app::update(duration<double> dt)
+{
+//	cout << "update(dt=" << dt.count() << "s)" << endl;
+
+	constexpr Real fall_speed = 3;
+	constexpr Real fall_off_threshold = -10.0;
+
+	auto cube_node_it = begin(_cube_nodes);
+	for (cube_object & cube : _cubes)
+	{
+		cube.position.y -= fall_speed * (2.0 - cube.scale) * dt.count();
+		if (cube.position.y < fall_off_threshold)
+			cube = new_cube();
+
+		(*cube_node_it)->setPosition(cube.position);  // update scene position
+		++cube_node_it;
+	}
+}
 
 void ogre_app::setup()
 {
@@ -46,24 +106,24 @@ void ogre_app::setup()
 	scene->setAmbientLight(ColourValue{0.5, 0.5, 0.5});
 
 	// register our scene with the RTSS
-	RTShader::ShaderGenerator * shadergen = RTShader::ShaderGenerator::getSingletonPtr();
+	Ogre::RTShader::ShaderGenerator * shadergen = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
 	shadergen->addSceneManager(scene);
 
 	SceneNode * root_nd = scene->getRootSceneNode();
 
 	// without light we would just get a black screen
 	SceneNode * light_nd = root_nd->createChildSceneNode();
-	Light * light = scene->createLight("MainLight");
+	Light * light = scene->createLight("light");
 	light_nd->setPosition(20, 80, 50);
 	light_nd->attachObject(light);
 
 	// create camera so we can observe scene
 	SceneNode * camera_nd = root_nd->createChildSceneNode();
-	camera_nd->setPosition(100, 200, 800);
+	camera_nd->setPosition(camera_position);
 	camera_nd->lookAt(Vector3{0, 0, -1}, Node::TS_PARENT);
 
-	Camera * camera = scene->createCamera("MainCamera");
-	camera->setNearClipDistance(5);  // specific to this sample
+	Camera * camera = scene->createCamera("main_camera");
+	camera->setNearClipDistance(0.1);  // specific to this sample
 	camera->setAutoAspectRatio(true);
 	camera_nd->attachObject(camera);
 
@@ -73,26 +133,23 @@ void ogre_app::setup()
 
 	getRenderWindow()->addViewport(camera);  // render into the main window
 
-	// create and render cube
-	Entity * cube = scene->createEntity(SceneManager::PT_CUBE);
-	SceneNode * cube_node = root_nd->createChildSceneNode();
-	cube_node->attachObject(cube);
+	auto cube_nodes_it = begin(_cube_nodes);
 
-	// cube size ?
-	Vector3 cube_size = cube->getBoundingBox().getSize();
-	cout << "cube aabb: " << cube_size << endl;
+	// add cubes to scene
+	for (cube_object & cube : _cubes)
+	{
+		Entity * cube_model = scene->createEntity(SceneManager::PT_CUBE);  // TODO: find out how to reuse entities
+		Real model_scale = 0.2 * (2.0 / cube_model->getBoundingBox().getSize().x);
+		Real cube_scale = model_scale * cube.scale;
 
-	// cube2
-	Entity * cube2 = cube->clone("cube2");
-	SceneNode * cube2_node = root_nd->createChildSceneNode();
-	cube2_node->attachObject(cube2);
-	cube2_node->setPosition(110, 0, 0);
+		SceneNode * node = root_nd->createChildSceneNode(cube.position);
+		node->setScale(cube_scale, cube_scale, cube_scale);
+		node->attachObject(cube_model);
 
-	// cube3
-	Entity * cube3 = cube->clone("cube3");
-	SceneNode * cube3_node = root_nd->createChildSceneNode();
-	cube3_node->attachObject(cube3);
-	cube3_node->setPosition(50, 0, 110);
+		// save node for later update
+		*cube_nodes_it = node;
+		++cube_nodes_it;
+	}
 
 	setWindowGrab();  //grab mouse
 }
@@ -109,7 +166,15 @@ void ogre_app::go()
 
 ogre_app::ogre_app()
 	: ApplicationContext{"ogre_cuberain"}
-{}
+{
+	// initialize cubes
+	constexpr int cube_count = 300;
+	_cubes.resize(cube_count);
+	for (cube_object & cube : _cubes)
+		cube = new_cube();
+
+	_cube_nodes.resize(cube_count);
+}
 
 bool ogre_app::keyPressed(KeyboardEvent const & evt)
 {
@@ -150,8 +215,33 @@ void ogre_app::frameRendered(Ogre::FrameEvent const & evt)
 	_cameraman->frameRendered(evt);
 }
 
+bool ogre_app::frameStarted(FrameEvent const & evt)
+{
+	// update scene before render
+	steady_clock::time_point now = steady_clock::now();
+	duration<double> dt = now - _last_frame_tp;
+	update(dt);
+	_last_frame_tp = now;
+	return ApplicationContext::frameStarted(evt);
+}
 
 
+cube_object new_cube()
+{
+	static random_device rd;
+	static default_random_engine rand{rd()};
+
+	return cube_object{
+		Vector3{
+			(rand() % 15) - 7.f,
+			7.f + (rand() % 30),
+			(rand() % 15) - 7.f},
+		0.7f + ((rand() % 70)/100.f)  // scale between 0.7 and 0.7+0.7
+	};
+}
+
+
+namespace std {
 
 string to_string(CameraStyle style)
 {
@@ -164,12 +254,11 @@ string to_string(CameraStyle style)
 	}
 }
 
+}  // std
 
 int main(int argc, char * argv[])
 {
 	ogre_app app;
-	app.initApp();
-	app.getRoot()->startRendering();
-	app.closeApp();
+	app.go();
 	return 0;
 }
