@@ -140,6 +140,7 @@ void ogre_app::setup()
 	for (cube_object & cube : _cubes)
 	{
 		Entity * cube_model = scene->createEntity(SceneManager::PT_CUBE);  // TODO: find out how to reuse entities
+		cube_model->setMaterialName("cube_color");
 		Real model_scale = 0.2 * (2.0 / cube_model->getBoundingBox().getSize().x);
 		Real cube_scale = model_scale * cube.scale;
 
