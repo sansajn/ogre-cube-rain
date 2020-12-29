@@ -129,7 +129,7 @@ void ogre_app::setup()
 	camera_nd->attachObject(camera);
 
 	_cameraman = make_unique<CameraMan>(camera_nd);
-	_cameraman->setStyle(CS_FREELOOK);
+	_cameraman->setStyle(CS_ORBIT);
 	cout << "camera style: " << to_string(_cameraman->getStyle()) << endl;
 
 	getRenderWindow()->addViewport(camera);  // render into the main window
@@ -155,11 +155,9 @@ void ogre_app::setup()
 
 	// axis
 	AxisObject axis;
-	Ogre::ManualObject * axis_model = axis.createAxis(scene, "axis", 1.0);
+	Ogre::ManualObject * axis_model = axis.createAxis(scene, "axis", 0.5);
 	SceneNode * axis_nd = root_nd->createChildSceneNode();
 	axis_nd->attachObject(axis_model);
-
-	setWindowGrab();  //grab mouse
 }
 
 void ogre_app::go()
@@ -173,7 +171,7 @@ void ogre_app::go()
 }
 
 ogre_app::ogre_app()
-	: ApplicationContext{"ogre_cuberain"}
+	: ApplicationContext{"ogre cuberain"}
 {
 	// initialize cubes
 	constexpr int cube_count = 300;
