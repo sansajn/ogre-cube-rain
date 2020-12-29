@@ -9,6 +9,7 @@
 #include <OgreApplicationContext.h>
 #include <OgreCameraMan.h>
 #include <OgreTrays.h>
+#include "axis.hpp"
 
 using std::vector;
 using std::string, std::to_string;
@@ -49,7 +50,7 @@ class ogre_app
 {
 public:
 	ogre_app();
-	void go();
+	void go();  //!< app entry point
 
 	// user input
 	bool keyPressed(KeyboardEvent const & evt) override;
@@ -150,6 +151,12 @@ void ogre_app::setup()
 		*cube_nodes_it = node;
 		++cube_nodes_it;
 	}
+
+	// axis
+	AxisObject axis;
+	Ogre::ManualObject * axis_model = axis.createAxis(scene, "axis", 1.0);
+	SceneNode * axis_nd = root_nd->createChildSceneNode();
+	axis_nd->attachObject(axis_model);
 
 	setWindowGrab();  //grab mouse
 }
