@@ -3,4 +3,4 @@ cpp17 = Environment(
 
 cpp17.ParseConfig('pkg-config --libs --cflags OGRE-Bites OGRE-Overlay OGRE-RTShaderSystem')
 
-cpp17.Program('cuberain', ['cuberain.cpp', 'axis.cpp'])
+cpp17.Program('cube_rain', ['cube_rain.cpp', 'axis.cpp'])

@@ -59,9 +59,9 @@ public:
 	void go();  //!< app entry point
 
 private:
-	void update(duration<double> dt);
 	void setup_scene(SceneManager & scene);
-	void setup_gui();
+	void update(duration<double> dt);
+	void update_gui();
 
 	// ApplicationContext overrides
 	void setup() override;
@@ -82,7 +82,6 @@ private:
 	unique_ptr<CameraMan> _cameraman;
 	vector<cube_object> _cubes;  // cube pool
 	vector<SceneNode *> _cube_nodes;
-	steady_clock::time_point _last_frame_tp;
 	InputListenerChain _input_listeners;
 	unique_ptr<ImGuiInputListener> _imgui_listener;
 	SceneManager * _scene = nullptr;
@@ -117,12 +116,12 @@ void ogre_app::update(duration<double> dt)
 		_cubes.resize(_cube_count);
 		_cube_nodes.resize(_cube_count);
 
-		for (int i = 0; i < _cube_count - prev_cube_count; ++i)  // replace with algorithm
+		for (int i = 0; i < _cube_count - prev_cube_count; ++i)
 		{
 			cube_object & cube = _cubes[prev_cube_count + i];
 			cube = new_cube();
 
-			Entity * cube_model = _scene->createEntity(SceneManager::PT_CUBE);  // TODO: find out how to reuse entities
+			Entity * cube_model = _scene->createEntity(SceneManager::PT_CUBE);
 			cube_model->setMaterialName("cube_color");  // see media/cube.material
 			Real model_scale = 0.2 * (2.0 / cube_model->getBoundingBox().getSize().x);
 			Real cube_scale = model_scale * cube.scale;
@@ -204,7 +203,7 @@ void ogre_app::setup_scene(SceneManager & scene)
 	axis_nd->attachObject(axis_model);
 }
 
-void ogre_app::setup_gui()
+void ogre_app::update_gui()
 {
 	// TODO: function is called periodically, rename it to update_gui()
 
@@ -314,13 +313,8 @@ bool ogre_app::textInput(TextInputEvent const & evt)
 
 bool ogre_app::frameStarted(FrameEvent const & evt)
 {
-	// TODO: use evt.timeSinceLastFrame instead of clock
-
-	// update scene before render
-	steady_clock::time_point now = steady_clock::now();
-	duration<double> dt = now - _last_frame_tp;
+	duration<double> dt{evt.timeSinceLastFrame};
 	update(dt);
-	_last_frame_tp = now;
 	return ApplicationContext::frameStarted(evt);
 }
 
@@ -331,7 +325,7 @@ void ogre_app::preViewportUpdate(RenderTargetViewportEvent const & evt)
 
 	ImGuiOverlay::NewFrame();
 
-	setup_gui();
+	update_gui();
 }
 
 
