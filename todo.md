@@ -4,4 +4,4 @@
 - [x] set proper cube color
 - [x] use orbital camera
 - [x] integrate imgui
-- [ ] refactor (timer and using zip algorithm)
+- [x] refactor (timer and using zip algorithm)
